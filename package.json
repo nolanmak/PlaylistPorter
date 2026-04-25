@@ -1,0 +1,21 @@
+{
+  "name": "playlist-porter",
+  "version": "0.1.0",
+  "description": "Export your Pandora library (playlists, thumbs-up, saved albums/artists) to a portable JSON file.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "playlist-porter": "src/index.js"
+  },
+  "scripts": {
+    "export": "node src/index.js export",
+    "start": "node src/index.js"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nolanmak/PlaylistPorter.git"
+  }
+}

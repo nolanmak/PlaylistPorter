@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+# Exported library data — contains your Pandora account info
+data/*.json
+data/.intercept-raw.txt
+data/*.txt
+data/*.md
+!data/.gitkeep
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
