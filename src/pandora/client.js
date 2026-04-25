@@ -3,17 +3,19 @@ import { BASE } from './endpoints.js';
 function loadEnv() {
   const cookie = process.env.PANDORA_COOKIE?.trim();
   const csrf = process.env.PANDORA_CSRF_TOKEN?.trim();
+  const auth = process.env.PANDORA_AUTH_TOKEN?.trim();
   const ua = process.env.PANDORA_USER_AGENT?.trim() ||
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36';
 
   if (!cookie) throw new Error('PANDORA_COOKIE is empty. Run /intercept and paste the full Cookie header into .env.local.');
   if (!csrf) throw new Error('PANDORA_CSRF_TOKEN is empty. Set it to the value of the `csrftoken` cookie.');
+  if (!auth) throw new Error('PANDORA_AUTH_TOKEN is empty. Set it to the captured `x-authtoken` header.');
 
-  return { cookie, csrf, ua };
+  return { cookie, csrf, auth, ua };
 }
 
 export async function pandoraPost(path, body = {}) {
-  const { cookie, csrf, ua } = loadEnv();
+  const { cookie, csrf, auth, ua } = loadEnv();
   const url = `${BASE}${path}`;
 
   const res = await fetch(url, {
@@ -25,6 +27,7 @@ export async function pandoraPost(path, body = {}) {
       'referer': `${BASE}/`,
       'user-agent': ua,
       'x-csrftoken': csrf,
+      'x-authtoken': auth,
       'cookie': cookie,
     },
     body: JSON.stringify(body),

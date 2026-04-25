@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { getPlaylistIndex, getPlaylistTracks } from './pandora/playlists.js';
 import { getSavedTracks } from './pandora/thumbs.js';
-import { getSavedAlbums, getSavedArtists } from './pandora/collection.js';
+import { getSavedAlbums, deriveSavedArtists } from './pandora/collection.js';
 import { writeJsonAtomic } from './util/writeJson.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,27 +51,17 @@ async function runExport() {
     }
   }
 
-  console.log('→ fetching saved tracks (thumbs / library)…');
+  console.log('→ fetching saved tracks (paginated)…');
   const thumbsUp = await getSavedTracks();
   console.log(`  ${thumbsUp.length} saved tracks`);
 
   console.log('→ fetching saved albums…');
-  let savedAlbums = [];
-  try {
-    savedAlbums = await getSavedAlbums();
-    console.log(`  ${savedAlbums.length} albums`);
-  } catch (err) {
-    console.warn(`  albums skipped: ${err.message}`);
-  }
+  const savedAlbums = await getSavedAlbums();
+  console.log(`  ${savedAlbums.length} albums`);
 
-  console.log('→ fetching saved artists…');
-  let savedArtists = [];
-  try {
-    savedArtists = await getSavedArtists();
-    console.log(`  ${savedArtists.length} artists`);
-  } catch (err) {
-    console.warn(`  artists skipped: ${err.message}`);
-  }
+  console.log('→ deriving saved artists from albums + tracks…');
+  const savedArtists = await deriveSavedArtists(savedAlbums, thumbsUp);
+  console.log(`  ${savedArtists.length} unique artists`);
 
   const out = {
     exportedAt: new Date().toISOString(),
