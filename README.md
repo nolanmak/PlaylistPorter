@@ -75,12 +75,16 @@ Writes `data/pandora-export.json`.
 
 ## Status
 
-- ✅ Authenticated client (cookie + CSRF + UA)
-- ✅ Playlist **index** (names, IDs, track counts)
-- ✅ Saved track IDs
-- ⏳ Per-playlist track listing — TODO once intercept captures the call
-- ⏳ Album / artist annotation — TODO once intercept captures the calls
-- ⏳ Track metadata resolution (`TR:xxx` → title / artist / album / ISRC)
+- ✅ Authenticated client (cookie + `X-CsrfToken` + `X-AuthToken` + UA)
+- ✅ Playlist index (names, IDs, track counts)
+- ✅ Per-playlist track listing — `/api/v7/playlists/getTracks`, paginated
+- ✅ Saved tracks (paginated to handle >1000 saved)
+- ✅ Saved albums — `/api/v6/collections/getSortedByTypes` with `typePrefixes:['AL']`
+- ✅ Track / album metadata via `/api/v4/catalog/annotateObjects` (title, artist, album, durationMs, ISRC)
+- ✅ Saved artists — derived from artistIds on saved albums + tracks, deduped, resolved
+
+Real-account test: 12 playlists, 313 tracks across them, 1164 saved tracks (99.7% with ISRCs),
+235 albums, 440 unique artists. End-to-end in ~5 seconds.
 
 ## Why JSON, not a direct Spotify import?
 
