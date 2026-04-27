@@ -75,20 +75,40 @@ Writes `data/pandora-export.json`.
 
 ## Status
 
-- ✅ Authenticated client (cookie + `X-CsrfToken` + `X-AuthToken` + UA)
-- ✅ Playlist index (names, IDs, track counts)
-- ✅ Per-playlist track listing — `/api/v7/playlists/getTracks`, paginated
-- ✅ Saved tracks (paginated to handle >1000 saved)
-- ✅ Saved albums — `/api/v6/collections/getSortedByTypes` with `typePrefixes:['AL']`
-- ✅ Track / album metadata via `/api/v4/catalog/annotateObjects` (title, artist, album, durationMs, ISRC)
-- ✅ Saved artists — derived from artistIds on saved albums + tracks, deduped, resolved
+**Pandora export** ✅
+- Authenticated client (cookie + `X-CsrfToken` + `X-AuthToken` + UA)
+- Playlist index, per-playlist tracks, saved tracks, saved albums
+- Track metadata via `/api/v4/catalog/annotateObjects` (title, artist, album, durationMs, ISRC)
+- Saved artists derived from artistIds on saved albums + tracks
+- Real-account test: 12 playlists, 313 playlist tracks, 1164 saved (99.7% ISRC coverage), 235 albums, 440 artists in ~5 seconds
 
-Real-account test: 12 playlists, 313 tracks across them, 1164 saved tracks (99.7% with ISRCs),
-235 albums, 440 unique artists. End-to-end in ~5 seconds.
+**Spotify upload** ✅
+- Local browser-based dashboard (`node src/index.js serve`)
+- Authorization Code OAuth flow with auto-refresh
+- ISRC-first matching with title+artist fallback
+- Idempotent — re-running is a fast no-op (matches existing playlists by `[PlaylistPorter:<id>]` description tag)
+- Live SSE progress UI
 
-## Why JSON, not a direct Spotify import?
+## Importing to Spotify
 
-Two reasons:
+```bash
+cd ~/PlaylistPorter
+node src/index.js serve   # opens http://127.0.0.1:8888 in your browser
+```
+
+First run walks you through:
+
+1. Registering a free [Spotify Developer App](https://developer.spotify.com/dashboard) (~5 min, no cost)
+   - Redirect URI: `http://127.0.0.1:8888/auth/callback` (the form shows this verbatim, copy/paste)
+2. Pasting Client ID + Client Secret into the dashboard form
+3. Click **Sign in with Spotify** → approve → you're on the import dashboard
+4. Click **Start Import** — live progress streams via SSE
+
+The importer saves: thumbed tracks → Library, albums → Library, artists → Followed, playlists → Playlists. Anything it can't resolve goes to `data/import-misses.csv` for manual review.
+
+## Why JSON-first?
+
+The two-stage design (Pandora → JSON → Spotify) means:
 
 1. **Idempotence + reproducibility.** Capture once, import anywhere — Spotify, Apple Music, YouTube Music. The dump is the source of truth.
 2. **No Pandora<>Spotify auth coupling.** You can re-run the importer without ever touching Pandora again.

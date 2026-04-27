@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PlaylistPorter — Setup</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { background: #121212; color: #fff; font: 15px/1.5 -apple-system, system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; }
+    h1 { font-size: 28px; margin: 0 0 6px; }
+    p.subtitle { color: #b3b3b3; margin: 0 0 32px; }
+    ol { padding-left: 22px; }
+    ol li { margin: 12px 0; }
+    code, .copy { background: #232323; padding: 2px 6px; border-radius: 4px; font: 13px ui-monospace, monospace; }
+    .copy { cursor: pointer; user-select: all; }
+    label { display: block; margin: 18px 0 6px; color: #b3b3b3; font-size: 13px; }
+    input { width: 100%; box-sizing: border-box; background: #1f1f1f; border: 1px solid #2e2e2e; color: #fff; padding: 11px 14px; font: 14px ui-monospace, monospace; border-radius: 8px; }
+    input:focus { outline: none; border-color: #1db954; }
+    button { background: #1db954; color: #000; border: 0; padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 24px; }
+    button:hover { background: #1ed760; }
+    a { color: #1db954; }
+    .note { color: #b3b3b3; font-size: 13px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1>One-time Spotify setup</h1>
+  <p class="subtitle">PlaylistPorter needs a Spotify Developer App to import on your behalf. Spotify requires every third-party tool to register one — five-minute setup, free, only you have access.</p>
+
+  <ol>
+    <li>Open <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and sign in.</li>
+    <li>Click <strong>Create app</strong>.</li>
+    <li>Fill in:
+      <ul style="margin-top: 8px">
+        <li>App name: <code>PlaylistPorter</code></li>
+        <li>App description: anything (e.g. <code>Personal music import</code>)</li>
+        <li><strong>Redirect URI</strong>: paste exactly: <span class="copy">{{redirectUri}}</span></li>
+        <li>Check <strong>Web API</strong></li>
+      </ul>
+    </li>
+    <li>Save. Open the app's <strong>Settings</strong> tab and copy the Client ID and Client Secret below.</li>
+  </ol>
+
+  <form method="POST" action="/setup">
+    <label for="clientId">Client ID</label>
+    <input id="clientId" name="clientId" type="text" required value="{{clientId}}" autocomplete="off" spellcheck="false">
+
+    <label for="clientSecret">Client Secret</label>
+    <input id="clientSecret" name="clientSecret" type="password" required autocomplete="off" spellcheck="false">
+
+    <p class="note">Stored locally in <code>data/spotify-state.json</code> (gitignored). Never sent anywhere except spotify.com.</p>
+
+    <button type="submit">Save and continue →</button>
+  </form>
+</body>
+</html>

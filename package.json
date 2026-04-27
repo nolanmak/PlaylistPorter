@@ -17,5 +17,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/nolanmak/PlaylistPorter.git"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "open": "^11.0.0"
   }
 }

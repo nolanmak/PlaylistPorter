@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PlaylistPorter — Dashboard</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { background: #121212; color: #fff; font: 15px/1.5 -apple-system, system-ui, sans-serif; max-width: 760px; margin: 60px auto; padding: 0 20px; }
+    h1 { font-size: 32px; margin: 0 0 8px; }
+    p.subtitle { color: #b3b3b3; margin: 0 0 32px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0 0 32px; }
+    .stat { background: #1f1f1f; border-radius: 10px; padding: 16px 18px; }
+    .stat .num { font-size: 26px; font-weight: 700; }
+    .stat .lbl { color: #b3b3b3; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+    .actions { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
+    button { background: #1db954; color: #000; border: 0; padding: 14px 28px; border-radius: 24px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    button:hover:not(:disabled) { background: #1ed760; }
+    button:disabled { background: #2e2e2e; color: #6a6a6a; cursor: not-allowed; }
+    .secondary { background: transparent; color: #b3b3b3; border: 1px solid #2e2e2e; }
+    .secondary:hover:not(:disabled) { background: #1f1f1f; color: #fff; }
+    #log { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 10px; padding: 16px; min-height: 280px; max-height: 480px; overflow-y: auto; font: 12px/1.6 ui-monospace, monospace; white-space: pre-wrap; }
+    .row { padding: 4px 0; }
+    .row.phase { color: #1db954; font-weight: 600; margin-top: 8px; }
+    .row.warn { color: #f39c12; }
+    .row.error { color: #e74c3c; }
+    .row.done { color: #1db954; font-weight: 700; margin-top: 12px; }
+    progress { width: 100%; height: 4px; margin-top: 8px; background: #1f1f1f; border-radius: 2px; appearance: none; }
+    progress::-webkit-progress-bar { background: #1f1f1f; border-radius: 2px; }
+    progress::-webkit-progress-value { background: #1db954; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <h1>Pandora → Spotify</h1>
+  <p class="subtitle">Imports your saved tracks, albums, artists, and playlists. Idempotent — safe to re-run.</p>
+
+  <div class="grid">
+    <div class="stat"><div class="num">{{playlists}}</div><div class="lbl">Playlists</div></div>
+    <div class="stat"><div class="num">{{playlistTracks}}</div><div class="lbl">Playlist tracks</div></div>
+    <div class="stat"><div class="num">{{thumbsUp}}</div><div class="lbl">Saved tracks</div></div>
+    <div class="stat"><div class="num">{{savedAlbums}}</div><div class="lbl">Albums</div></div>
+    <div class="stat"><div class="num">{{savedArtists}}</div><div class="lbl">Artists</div></div>
+    <div class="stat"><div class="num">{{isrcCoverage}}</div><div class="lbl">ISRC coverage</div></div>
+  </div>
+
+  <div class="actions">
+    <button id="start">Start import</button>
+    <progress id="bar" max="100" value="0" style="display:none"></progress>
+  </div>
+
+  <div id="log"></div>
+
+  <p style="margin-top: 24px"><form method="POST" action="/api/logout" style="display:inline"><button type="submit" class="secondary">Sign out</button></form></p>
+
+  <script>
+    const startBtn = document.getElementById('start');
+    const log = document.getElementById('log');
+    const bar = document.getElementById('bar');
+
+    function append(msg, cls = '') {
+      const el = document.createElement('div');
+      el.className = 'row' + (cls ? ' ' + cls : '');
+      el.textContent = msg;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      startBtn.textContent = 'Importing…';
+      bar.style.display = 'block';
+      append('→ Starting…', 'phase');
+
+      const res = await fetch('/api/import/start', { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        append('✗ ' + (err.error || res.statusText), 'error');
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start import';
+        return;
+      }
+
+      const stream = new EventSource('/api/import/stream');
+      stream.onmessage = (ev) => {
+        const data = JSON.parse(ev.data);
+        if (data.event === 'phase') {
+          if (data.label) append('→ ' + data.label, 'phase');
+          else if (data.name === 'resolve-done') append(`  resolved ${data.total} (ISRC ${data.isrcHits} · fallback ${data.fallbackHits} · misses ${data.misses})`);
+          else if (data.name === 'save-tracks-done') append(`  ${data.saved} new saved · ${data.alreadySaved} already in library`);
+          else if (data.name === 'save-albums-done') append(`  ${data.saved} new albums · ${data.resolved}/${data.total} resolved`);
+          else if (data.name === 'follow-artists-done') append(`  ${data.followed} newly followed · ${data.resolved}/${data.total} resolved`);
+          else if (data.name === 'playlists-done') append('  playlists complete');
+        } else if (data.event === 'progress') {
+          if (data.total) {
+            const pct = data.total ? (data.done / data.total) * 100 : 0;
+            bar.value = pct;
+            append(`  ${data.done}/${data.total}` + (data.label ? ` · ${data.label}` : ''));
+          }
+        } else if (data.event === 'playlist') {
+          append(`  ✓ ${data.name}: +${data.added} of ${data.total}`);
+        } else if (data.event === 'warn') {
+          append('! ' + data.message, 'warn');
+        } else if (data.event === 'error') {
+          append('✗ ' + data.message, 'error');
+          stream.close();
+          startBtn.disabled = false;
+          startBtn.textContent = 'Retry';
+        } else if (data.event === 'completed') {
+          append('✓ Import complete.', 'done');
+          bar.value = 100;
+          stream.close();
+          startBtn.disabled = false;
+          startBtn.textContent = 'Run again';
+        } else if (data.event === 'done') {
+          append(`  ${data.totalTracks} unique tracks · ${data.isrcHits} ISRC · ${data.fallbackHits} fuzzy · ${data.misses} missed`);
+        }
+      };
+      stream.onerror = () => {
+        append('  (stream closed)', 'warn');
+      };
+    });
+  </script>
+</body>
+</html>

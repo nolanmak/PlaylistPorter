@@ -77,11 +77,24 @@ async function runExport() {
   console.log(`\nWrote ${outPath}`);
 }
 
+async function runServe() {
+  const { createApp } = await import('./server/app.js');
+  const open = (await import('open')).default;
+  const app = createApp();
+  const port = Number(process.env.PORT ?? 8888);
+  const url = `http://127.0.0.1:${port}`;
+  app.listen(port, '127.0.0.1', () => {
+    console.log(`PlaylistPorter dashboard: ${url}`);
+  });
+  setTimeout(() => { open(url).catch(() => {}); }, 250);
+}
+
 async function main() {
   await loadDotEnvLocal();
-  const cmd = process.argv[2] ?? 'export';
+  const cmd = process.argv[2] ?? 'serve';
   if (cmd === 'export') return runExport();
-  console.error(`Unknown command: ${cmd}\nUsage: playlist-porter export`);
+  if (cmd === 'serve') return runServe();
+  console.error(`Unknown command: ${cmd}\nUsage: playlist-porter <serve|export>`);
   process.exit(1);
 }
 
